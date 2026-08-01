@@ -9,46 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as PayoutsRouteImport } from './routes/payouts'
-import { Route as MarketplaceRouteImport } from './routes/marketplace'
-import { Route as FaucetRouteImport } from './routes/faucet'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as AnalyticsRouteImport } from './routes/analytics'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as UIdRouteImport } from './routes/u.$id'
-import { Route as CampaignsNewRouteImport } from './routes/campaigns.new'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as FaucetRouteImport } from './routes/faucet'
+import { Route as MarketplaceRouteImport } from './routes/marketplace'
+import { Route as PayoutsRouteImport } from './routes/payouts'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CampaignsIdRouteImport } from './routes/campaigns.$id'
+import { Route as CampaignsNewRouteImport } from './routes/campaigns.new'
+import { Route as UIdRouteImport } from './routes/u.$id'
 
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PayoutsRoute = PayoutsRouteImport.update({
-  id: '/payouts',
-  path: '/payouts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MarketplaceRoute = MarketplaceRouteImport.update({
-  id: '/marketplace',
-  path: '/marketplace',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FaucetRoute = FaucetRouteImport.update({
-  id: '/faucet',
-  path: '/faucet',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AnalyticsRoute = AnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -56,14 +31,39 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UIdRoute = UIdRouteImport.update({
-  id: '/u/$id',
-  path: '/u/$id',
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaucetRoute = FaucetRouteImport.update({
+  id: '/faucet',
+  path: '/faucet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceRoute = MarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PayoutsRoute = PayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CampaignsIdRoute = CampaignsIdRouteImport.update({
+  id: '/campaigns/$id',
+  path: '/campaigns/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CampaignsNewRoute = CampaignsNewRouteImport.update({
@@ -71,9 +71,9 @@ const CampaignsNewRoute = CampaignsNewRouteImport.update({
   path: '/campaigns/new',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CampaignsIdRoute = CampaignsIdRouteImport.update({
-  id: '/campaigns/$id',
-  path: '/campaigns/$id',
+const UIdRoute = UIdRouteImport.update({
+  id: '/u/$id',
+  path: '/u/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -175,46 +175,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/payouts': {
-      id: '/payouts'
-      path: '/payouts'
-      fullPath: '/payouts'
-      preLoaderRoute: typeof PayoutsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/marketplace': {
-      id: '/marketplace'
-      path: '/marketplace'
-      fullPath: '/marketplace'
-      preLoaderRoute: typeof MarketplaceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/faucet': {
-      id: '/faucet'
-      path: '/faucet'
-      fullPath: '/faucet'
-      preLoaderRoute: typeof FaucetRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/analytics': {
-      id: '/analytics'
-      path: '/analytics'
-      fullPath: '/analytics'
-      preLoaderRoute: typeof AnalyticsRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -224,18 +189,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/u/$id': {
-      id: '/u/$id'
-      path: '/u/$id'
-      fullPath: '/u/$id'
-      preLoaderRoute: typeof UIdRouteImport
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faucet': {
+      id: '/faucet'
+      path: '/faucet'
+      fullPath: '/faucet'
+      preLoaderRoute: typeof FaucetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketplace': {
+      id: '/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof MarketplaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payouts': {
+      id: '/payouts'
+      path: '/payouts'
+      fullPath: '/payouts'
+      preLoaderRoute: typeof PayoutsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campaigns/$id': {
+      id: '/campaigns/$id'
+      path: '/campaigns/$id'
+      fullPath: '/campaigns/$id'
+      preLoaderRoute: typeof CampaignsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/campaigns/new': {
@@ -245,11 +245,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CampaignsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/campaigns/$id': {
-      id: '/campaigns/$id'
-      path: '/campaigns/$id'
-      fullPath: '/campaigns/$id'
-      preLoaderRoute: typeof CampaignsIdRouteImport
+    '/u/$id': {
+      id: '/u/$id'
+      path: '/u/$id'
+      fullPath: '/u/$id'
+      preLoaderRoute: typeof UIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
