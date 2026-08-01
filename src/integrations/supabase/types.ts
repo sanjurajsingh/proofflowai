@@ -18,12 +18,15 @@ export type Database = {
         Row: {
           brand_id: string
           category: string | null
+          cooldown_seconds: number
           cover_image_url: string | null
           created_at: string
           description: string
           id: string
           instructions: string | null
+          max_per_user: number
           max_submissions: number | null
+          min_trust_score: number
           proof_type: Database["public"]["Enums"]["proof_type"]
           reward_amount: number
           spent_budget: number
@@ -35,12 +38,15 @@ export type Database = {
         Insert: {
           brand_id: string
           category?: string | null
+          cooldown_seconds?: number
           cover_image_url?: string | null
           created_at?: string
           description: string
           id?: string
           instructions?: string | null
+          max_per_user?: number
           max_submissions?: number | null
+          min_trust_score?: number
           proof_type?: Database["public"]["Enums"]["proof_type"]
           reward_amount: number
           spent_budget?: number
@@ -52,12 +58,15 @@ export type Database = {
         Update: {
           brand_id?: string
           category?: string | null
+          cooldown_seconds?: number
           cover_image_url?: string | null
           created_at?: string
           description?: string
           id?: string
           instructions?: string | null
+          max_per_user?: number
           max_submissions?: number | null
+          min_trust_score?: number
           proof_type?: Database["public"]["Enums"]["proof_type"]
           reward_amount?: number
           spent_budget?: number
@@ -68,33 +77,132 @@ export type Database = {
         }
         Relationships: []
       }
+      disposable_email_domains: {
+        Row: {
+          created_at: string
+          domain: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+        }
+        Relationships: []
+      }
+      payout_requests: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          destination: string | null
+          id: string
+          method: string
+          processed_at: string | null
+          status: Database["public"]["Enums"]["payout_status"]
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          created_at?: string
+          destination?: string | null
+          id?: string
+          method?: string
+          processed_at?: string | null
+          status?: Database["public"]["Enums"]["payout_status"]
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          destination?: string | null
+          id?: string
+          method?: string
+          processed_at?: string | null
+          status?: Database["public"]["Enums"]["payout_status"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          approved_submissions: number
           avatar_url: string | null
           bio: string | null
           created_at: string
           display_name: string | null
+          email: string | null
           id: string
+          total_earned: number
+          total_submissions: number
+          trust_score: number
           updated_at: string
           wallet_balance: number
         }
         Insert: {
+          approved_submissions?: number
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           display_name?: string | null
+          email?: string | null
           id: string
+          total_earned?: number
+          total_submissions?: number
+          trust_score?: number
           updated_at?: string
           wallet_balance?: number
         }
         Update: {
+          approved_submissions?: number
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           display_name?: string | null
+          email?: string | null
           id?: string
+          total_earned?: number
+          total_submissions?: number
+          trust_score?: number
           updated_at?: string
           wallet_balance?: number
+        }
+        Relationships: []
+      }
+      submission_fingerprints: {
+        Row: {
+          created_at: string
+          device_hash: string | null
+          email: string | null
+          id: string
+          ip_address: string | null
+          submission_id: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_hash?: string | null
+          email?: string | null
+          id?: string
+          ip_address?: string | null
+          submission_id: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_hash?: string | null
+          email?: string | null
+          id?: string
+          ip_address?: string | null
+          submission_id?: string
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -106,6 +214,7 @@ export type Database = {
           ai_relevance_score: number | null
           ai_spam_score: number | null
           campaign_id: string
+          content_hash: string | null
           created_at: string
           id: string
           proof_image_url: string | null
@@ -124,6 +233,7 @@ export type Database = {
           ai_relevance_score?: number | null
           ai_spam_score?: number | null
           campaign_id: string
+          content_hash?: string | null
           created_at?: string
           id?: string
           proof_image_url?: string | null
@@ -142,6 +252,7 @@ export type Database = {
           ai_relevance_score?: number | null
           ai_spam_score?: number | null
           campaign_id?: string
+          content_hash?: string | null
           created_at?: string
           id?: string
           proof_image_url?: string | null
@@ -184,6 +295,42 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["wallet_tx_kind"]
+          note: string | null
+          payout_request_id: string | null
+          submission_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["wallet_tx_kind"]
+          note?: string | null
+          payout_request_id?: string | null
+          submission_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["wallet_tx_kind"]
+          note?: string | null
+          payout_request_id?: string | null
+          submission_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -200,13 +347,16 @@ export type Database = {
     Enums: {
       app_role: "admin" | "brand" | "user"
       campaign_status: "draft" | "active" | "paused" | "completed"
+      payout_status: "pending" | "approved" | "paid" | "rejected"
       proof_type: "screenshot" | "link" | "image" | "text"
       submission_status:
         | "pending"
+        | "queued"
         | "ai_reviewing"
         | "approved"
         | "rejected"
         | "paid"
+      wallet_tx_kind: "earn" | "payout" | "refund" | "adjustment"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -336,14 +486,17 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "brand", "user"],
       campaign_status: ["draft", "active", "paused", "completed"],
+      payout_status: ["pending", "approved", "paid", "rejected"],
       proof_type: ["screenshot", "link", "image", "text"],
       submission_status: [
         "pending",
+        "queued",
         "ai_reviewing",
         "approved",
         "rejected",
         "paid",
       ],
+      wallet_tx_kind: ["earn", "payout", "refund", "adjustment"],
     },
   },
 } as const
