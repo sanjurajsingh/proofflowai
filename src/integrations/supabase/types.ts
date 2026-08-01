@@ -43,61 +43,103 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          allowed_domains: string[]
+          auto_approve_threshold: number
           brand_id: string
           category: string | null
           cooldown_seconds: number
           cover_image_url: string | null
           created_at: string
           description: string
+          end_at: string | null
+          forbidden_domains: string[]
+          funded_at: string | null
+          funding_tx_hash: string | null
+          geo_restrictions: string[]
           id: string
           instructions: string | null
+          manual_review_threshold: number
           max_per_user: number
           max_submissions: number | null
+          min_text_length: number
           min_trust_score: number
           proof_type: Database["public"]["Enums"]["proof_type"]
+          reject_threshold: number
+          required_keywords: string[]
+          required_proof_types: string[]
           reward_amount: number
           spent_budget: number
+          start_at: string | null
           status: Database["public"]["Enums"]["campaign_status"]
+          tags: string[]
           title: string
           total_budget: number
           updated_at: string
         }
         Insert: {
+          allowed_domains?: string[]
+          auto_approve_threshold?: number
           brand_id: string
           category?: string | null
           cooldown_seconds?: number
           cover_image_url?: string | null
           created_at?: string
           description: string
+          end_at?: string | null
+          forbidden_domains?: string[]
+          funded_at?: string | null
+          funding_tx_hash?: string | null
+          geo_restrictions?: string[]
           id?: string
           instructions?: string | null
+          manual_review_threshold?: number
           max_per_user?: number
           max_submissions?: number | null
+          min_text_length?: number
           min_trust_score?: number
           proof_type?: Database["public"]["Enums"]["proof_type"]
+          reject_threshold?: number
+          required_keywords?: string[]
+          required_proof_types?: string[]
           reward_amount: number
           spent_budget?: number
+          start_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
+          tags?: string[]
           title: string
           total_budget: number
           updated_at?: string
         }
         Update: {
+          allowed_domains?: string[]
+          auto_approve_threshold?: number
           brand_id?: string
           category?: string | null
           cooldown_seconds?: number
           cover_image_url?: string | null
           created_at?: string
           description?: string
+          end_at?: string | null
+          forbidden_domains?: string[]
+          funded_at?: string | null
+          funding_tx_hash?: string | null
+          geo_restrictions?: string[]
           id?: string
           instructions?: string | null
+          manual_review_threshold?: number
           max_per_user?: number
           max_submissions?: number | null
+          min_text_length?: number
           min_trust_score?: number
           proof_type?: Database["public"]["Enums"]["proof_type"]
+          reject_threshold?: number
+          required_keywords?: string[]
+          required_proof_types?: string[]
           reward_amount?: number
           spent_budget?: number
+          start_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
+          tags?: string[]
           title?: string
           total_budget?: number
           updated_at?: string
@@ -162,7 +204,6 @@ export type Database = {
           bio: string | null
           created_at: string
           display_name: string | null
-          email: string | null
           id: string
           total_earned: number
           total_submissions: number
@@ -177,7 +218,6 @@ export type Database = {
           bio?: string | null
           created_at?: string
           display_name?: string | null
-          email?: string | null
           id: string
           total_earned?: number
           total_submissions?: number
@@ -192,7 +232,6 @@ export type Database = {
           bio?: string | null
           created_at?: string
           display_name?: string | null
-          email?: string | null
           id?: string
           total_earned?: number
           total_submissions?: number
@@ -215,6 +254,10 @@ export type Database = {
           submission_id: string
           tx_hash: string | null
           user_id: string
+          voucher_deadline: number | null
+          voucher_issued_at: string | null
+          voucher_nonce: string | null
+          voucher_signature: string | null
           wallet_address: string
         }
         Insert: {
@@ -228,6 +271,10 @@ export type Database = {
           submission_id: string
           tx_hash?: string | null
           user_id: string
+          voucher_deadline?: number | null
+          voucher_issued_at?: string | null
+          voucher_nonce?: string | null
+          voucher_signature?: string | null
           wallet_address: string
         }
         Update: {
@@ -241,6 +288,10 @@ export type Database = {
           submission_id?: string
           tx_hash?: string | null
           user_id?: string
+          voucher_deadline?: number | null
+          voucher_issued_at?: string | null
+          voucher_nonce?: string | null
+          voucher_signature?: string | null
           wallet_address?: string
         }
         Relationships: [
@@ -503,7 +554,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "brand" | "user"
-      campaign_status: "draft" | "active" | "paused" | "completed"
+      campaign_status:
+        | "draft"
+        | "pending_review"
+        | "active"
+        | "paused"
+        | "completed"
       claim_status: "unclaimed" | "claimable" | "claiming" | "paid" | "failed"
       payout_status: "pending" | "approved" | "paid" | "rejected"
       proof_type: "screenshot" | "link" | "image" | "text"
@@ -644,7 +700,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "brand", "user"],
-      campaign_status: ["draft", "active", "paused", "completed"],
+      campaign_status: [
+        "draft",
+        "pending_review",
+        "active",
+        "paused",
+        "completed",
+      ],
       claim_status: ["unclaimed", "claimable", "claiming", "paid", "failed"],
       payout_status: ["pending", "approved", "paid", "rejected"],
       proof_type: ["screenshot", "link", "image", "text"],
