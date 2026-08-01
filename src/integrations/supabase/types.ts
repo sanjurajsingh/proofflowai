@@ -14,16 +14,199 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      campaigns: {
+        Row: {
+          brand_id: string
+          category: string | null
+          cover_image_url: string | null
+          created_at: string
+          description: string
+          id: string
+          instructions: string | null
+          max_submissions: number | null
+          proof_type: Database["public"]["Enums"]["proof_type"]
+          reward_amount: number
+          spent_budget: number
+          status: Database["public"]["Enums"]["campaign_status"]
+          title: string
+          total_budget: number
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          category?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          instructions?: string | null
+          max_submissions?: number | null
+          proof_type?: Database["public"]["Enums"]["proof_type"]
+          reward_amount: number
+          spent_budget?: number
+          status?: Database["public"]["Enums"]["campaign_status"]
+          title: string
+          total_budget: number
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          category?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          instructions?: string | null
+          max_submissions?: number | null
+          proof_type?: Database["public"]["Enums"]["proof_type"]
+          reward_amount?: number
+          spent_budget?: number
+          status?: Database["public"]["Enums"]["campaign_status"]
+          title?: string
+          total_budget?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          wallet_balance: number
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+          wallet_balance?: number
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          wallet_balance?: number
+        }
+        Relationships: []
+      }
+      submissions: {
+        Row: {
+          ai_confidence_score: number | null
+          ai_feedback: string | null
+          ai_quality_score: number | null
+          ai_relevance_score: number | null
+          ai_spam_score: number | null
+          campaign_id: string
+          created_at: string
+          id: string
+          proof_image_url: string | null
+          proof_text: string | null
+          proof_url: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reward_paid: number | null
+          status: Database["public"]["Enums"]["submission_status"]
+          user_id: string
+        }
+        Insert: {
+          ai_confidence_score?: number | null
+          ai_feedback?: string | null
+          ai_quality_score?: number | null
+          ai_relevance_score?: number | null
+          ai_spam_score?: number | null
+          campaign_id: string
+          created_at?: string
+          id?: string
+          proof_image_url?: string | null
+          proof_text?: string | null
+          proof_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reward_paid?: number | null
+          status?: Database["public"]["Enums"]["submission_status"]
+          user_id: string
+        }
+        Update: {
+          ai_confidence_score?: number | null
+          ai_feedback?: string | null
+          ai_quality_score?: number | null
+          ai_relevance_score?: number | null
+          ai_spam_score?: number | null
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          proof_image_url?: string | null
+          proof_text?: string | null
+          proof_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reward_paid?: number | null
+          status?: Database["public"]["Enums"]["submission_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "brand" | "user"
+      campaign_status: "draft" | "active" | "paused" | "completed"
+      proof_type: "screenshot" | "link" | "image" | "text"
+      submission_status:
+        | "pending"
+        | "ai_reviewing"
+        | "approved"
+        | "rejected"
+        | "paid"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +333,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "brand", "user"],
+      campaign_status: ["draft", "active", "paused", "completed"],
+      proof_type: ["screenshot", "link", "image", "text"],
+      submission_status: [
+        "pending",
+        "ai_reviewing",
+        "approved",
+        "rejected",
+        "paid",
+      ],
+    },
   },
 } as const
