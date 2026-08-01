@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_treasuries: {
+        Row: {
+          brand_id: string
+          created_at: string
+          id: string
+          reserved_balance: number
+          treasury_balance: number
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          id?: string
+          reserved_balance?: number
+          treasury_balance?: number
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          id?: string
+          reserved_balance?: number
+          treasury_balance?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           brand_id: string
@@ -141,6 +168,7 @@ export type Database = {
           total_submissions: number
           trust_score: number
           updated_at: string
+          wallet_address: string | null
           wallet_balance: number
         }
         Insert: {
@@ -155,6 +183,7 @@ export type Database = {
           total_submissions?: number
           trust_score?: number
           updated_at?: string
+          wallet_address?: string | null
           wallet_balance?: number
         }
         Update: {
@@ -169,9 +198,67 @@ export type Database = {
           total_submissions?: number
           trust_score?: number
           updated_at?: string
+          wallet_address?: string | null
           wallet_balance?: number
         }
         Relationships: []
+      }
+      reward_claims: {
+        Row: {
+          amount: number
+          campaign_id: string
+          created_at: string
+          error: string | null
+          id: string
+          settled_at: string | null
+          status: Database["public"]["Enums"]["claim_status"]
+          submission_id: string
+          tx_hash: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          amount: number
+          campaign_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          settled_at?: string | null
+          status?: Database["public"]["Enums"]["claim_status"]
+          submission_id: string
+          tx_hash?: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          settled_at?: string | null
+          status?: Database["public"]["Enums"]["claim_status"]
+          submission_id?: string
+          tx_hash?: string | null
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_claims_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_claims_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       submission_fingerprints: {
         Row: {
@@ -214,6 +301,8 @@ export type Database = {
           ai_relevance_score: number | null
           ai_spam_score: number | null
           campaign_id: string
+          claim_status: Database["public"]["Enums"]["claim_status"]
+          claimed_at: string | null
           content_hash: string | null
           created_at: string
           id: string
@@ -224,6 +313,7 @@ export type Database = {
           reviewed_at: string | null
           reward_paid: number | null
           status: Database["public"]["Enums"]["submission_status"]
+          tx_hash: string | null
           user_id: string
         }
         Insert: {
@@ -233,6 +323,8 @@ export type Database = {
           ai_relevance_score?: number | null
           ai_spam_score?: number | null
           campaign_id: string
+          claim_status?: Database["public"]["Enums"]["claim_status"]
+          claimed_at?: string | null
           content_hash?: string | null
           created_at?: string
           id?: string
@@ -243,6 +335,7 @@ export type Database = {
           reviewed_at?: string | null
           reward_paid?: number | null
           status?: Database["public"]["Enums"]["submission_status"]
+          tx_hash?: string | null
           user_id: string
         }
         Update: {
@@ -252,6 +345,8 @@ export type Database = {
           ai_relevance_score?: number | null
           ai_spam_score?: number | null
           campaign_id?: string
+          claim_status?: Database["public"]["Enums"]["claim_status"]
+          claimed_at?: string | null
           content_hash?: string | null
           created_at?: string
           id?: string
@@ -262,6 +357,7 @@ export type Database = {
           reviewed_at?: string | null
           reward_paid?: number | null
           status?: Database["public"]["Enums"]["submission_status"]
+          tx_hash?: string | null
           user_id?: string
         }
         Relationships: [
@@ -270,6 +366,67 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      treasury_transactions: {
+        Row: {
+          amount: number
+          brand_id: string
+          campaign_id: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["treasury_tx_kind"]
+          note: string | null
+          submission_id: string | null
+          treasury_id: string
+          tx_hash: string | null
+        }
+        Insert: {
+          amount: number
+          brand_id: string
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["treasury_tx_kind"]
+          note?: string | null
+          submission_id?: string | null
+          treasury_id: string
+          tx_hash?: string | null
+        }
+        Update: {
+          amount?: number
+          brand_id?: string
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["treasury_tx_kind"]
+          note?: string | null
+          submission_id?: string | null
+          treasury_id?: string
+          tx_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treasury_transactions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treasury_transactions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treasury_transactions_treasury_id_fkey"
+            columns: ["treasury_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_treasuries"
             referencedColumns: ["id"]
           },
         ]
@@ -347,6 +504,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "brand" | "user"
       campaign_status: "draft" | "active" | "paused" | "completed"
+      claim_status: "unclaimed" | "claimable" | "claiming" | "paid" | "failed"
       payout_status: "pending" | "approved" | "paid" | "rejected"
       proof_type: "screenshot" | "link" | "image" | "text"
       submission_status:
@@ -356,6 +514,7 @@ export type Database = {
         | "approved"
         | "rejected"
         | "paid"
+      treasury_tx_kind: "fund" | "reserve" | "release" | "spend" | "refund"
       wallet_tx_kind: "earn" | "payout" | "refund" | "adjustment"
     }
     CompositeTypes: {
@@ -486,6 +645,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "brand", "user"],
       campaign_status: ["draft", "active", "paused", "completed"],
+      claim_status: ["unclaimed", "claimable", "claiming", "paid", "failed"],
       payout_status: ["pending", "approved", "paid", "rejected"],
       proof_type: ["screenshot", "link", "image", "text"],
       submission_status: [
@@ -496,6 +656,7 @@ export const Constants = {
         "rejected",
         "paid",
       ],
+      treasury_tx_kind: ["fund", "reserve", "release", "spend", "refund"],
       wallet_tx_kind: ["earn", "payout", "refund", "adjustment"],
     },
   },
