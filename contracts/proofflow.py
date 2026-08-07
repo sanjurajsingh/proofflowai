@@ -14,10 +14,11 @@ private bucket); only their storage path and a content hash are recorded here.
 """
 
 import json
-import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from genlayer import *
+
 
 STATUS_PENDING = "pending"
 STATUS_APPROVED = "approved"
