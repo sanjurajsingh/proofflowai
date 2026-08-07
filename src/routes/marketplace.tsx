@@ -2,8 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Coins, Users, Image, Link2, FileText, Camera } from "lucide-react";
 import { Header } from "@/components/Header";
-import { supabase } from "@/integrations/supabase/client";
-import { money } from "@/lib/format";
+import { fromWei, genLabel, getCampaigns, qk } from "@/lib/genlayer/proofflow";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/marketplace")({
@@ -16,13 +15,9 @@ const proofIcons: Record<string, any> = {
 
 function Marketplace() {
   const { data: campaigns, isLoading } = useQuery({
-    queryKey: ["marketplace"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campaigns").select("*").eq("status", "active").order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+    queryKey: qk.campaigns,
+    queryFn: getCampaigns,
+    select: (rows) => rows.filter((c) => c.active).sort((a, b) => b.created_at - a.created_at),
   });
 
   return (
@@ -48,17 +43,18 @@ function Marketplace() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {campaigns.map((c) => {
               const Icon = proofIcons[c.proof_type] ?? FileText;
-              const remaining = Number(c.total_budget) - Number(c.spent_budget);
-              const slots = Math.floor(remaining / Number(c.reward_amount));
+              const remaining = fromWei(c.funded) - fromWei(c.spent);
+              const reward = fromWei(c.reward);
+              const slots = reward > 0 ? Math.floor(remaining / reward) : 0;
               return (
-                <Link key={c.id} to="/campaigns/$id" params={{ id: c.id }} className="group">
+                <Link key={c.id} to="/campaigns/$id" params={{ id: String(c.id) }} className="group">
                   <div className="flex h-full flex-col glass rounded-2xl p-6 transition-all hover:border-primary/50 hover:shadow-glow">
                     <div className="mb-4 flex items-start justify-between">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="rounded-full bg-gradient-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-glow">
-                        {money(c.reward_amount)}
+                        {genLabel(c.reward)}
                       </div>
                     </div>
                     <h3 className="font-display text-lg font-semibold leading-tight group-hover:text-primary">{c.title}</h3>
