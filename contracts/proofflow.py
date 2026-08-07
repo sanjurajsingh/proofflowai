@@ -768,7 +768,7 @@ must be parsable by a JSON parser without errors.
                 "created_at": int(p.created_at),
             }
             for p in self.payouts
-            if p.status == PAYOUT_PENDING
+            if p.status == PAYOUT_PENDING or p.status == PAYOUT_ESCROWED
         ]
 
     @gl.public.view
