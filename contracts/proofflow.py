@@ -104,28 +104,30 @@ class PayoutRequest:
 
 
 class CampaignCreated(gl.Event):
-    def __init__(self, campaign_id: u256, owner: Address, /):
+    # Fields before `/` are indexed topics; everything else travels in the blob.
+    def __init__(self, campaign_id: u256, /, **blob):
         pass
 
 
 class CampaignFunded(gl.Event):
-    def __init__(self, campaign_id: u256, amount: u256, /):
+    def __init__(self, campaign_id: u256, /, **blob):
         pass
 
 
 class ProofVerified(gl.Event):
-    def __init__(self, submission_id: u256, worker: Address, status: str, /):
+    def __init__(self, submission_id: u256, /, **blob):
         pass
 
 
 class RewardCredited(gl.Event):
-    def __init__(self, worker: Address, amount: u256, /):
+    def __init__(self, worker: Address, /, **blob):
         pass
 
 
 class PayoutRequested(gl.Event):
-    def __init__(self, payout_id: u256, worker: Address, amount: u256, /):
+    def __init__(self, payout_id: u256, /, **blob):
         pass
+
 
 
 class ProofFlow(gl.Contract):
