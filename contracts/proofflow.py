@@ -154,7 +154,7 @@ class ProofFlow(gl.Contract):
     def _now(self) -> int:
         # Time inside GenVM is pinned to the transaction timestamp, so this is
         # identical on every validator.
-        return int(time.time())
+        return int(datetime.now(timezone.utc).timestamp())
 
     def _campaign(self, campaign_id: int) -> Campaign:
         if campaign_id < 0 or campaign_id >= len(self.campaigns):
@@ -188,7 +188,7 @@ class ProofFlow(gl.Contract):
                 created_at=u256(self._now()),
             )
         )
-        RewardCredited(worker, u256(amount)).emit()
+        RewardCredited(worker, amount=u256(amount)).emit()
         return new_balance
 
     def _require_owner_or_admin(self, campaign: Campaign) -> None:
@@ -248,7 +248,7 @@ class ProofFlow(gl.Contract):
                 created_at=u256(self._now()),
             )
         )
-        CampaignCreated(u256(campaign_id), gl.message.sender_address).emit()
+        CampaignCreated(u256(campaign_id), owner=gl.message.sender_address).emit()
         return campaign_id
 
     @gl.public.write.payable
@@ -261,7 +261,7 @@ class ProofFlow(gl.Contract):
         campaign.funded = u256(funded)
         if funded >= int(campaign.reward):
             campaign.active = True
-        CampaignFunded(u256(campaign_id), u256(amount)).emit()
+        CampaignFunded(u256(campaign_id), amount=u256(amount)).emit()
         return funded
 
     @gl.public.write
@@ -450,7 +450,7 @@ must be parsable by a JSON parser without errors.
         elif status == STATUS_REJECTED:
             self.trust[worker] = u256(max(0, trust - 2))
 
-        ProofVerified(u256(submission_id), worker, status).emit()
+        ProofVerified(u256(submission_id), worker=worker, status=status).emit()
         return submission_id
 
     def _settle_approval(self, campaign: Campaign, submission: Submission, trust: int) -> None:
@@ -494,7 +494,7 @@ must be parsable by a JSON parser without errors.
             submission.feedback = reason if reason != "" else "Rejected by reviewer"
             submission.reviewed_at = u256(self._now())
             self.trust[worker] = u256(max(0, trust - 2))
-        ProofVerified(submission.id, worker, submission.status).emit()
+        ProofVerified(u256(int(submission.id)), worker=worker, status=submission.status).emit()
         return submission.status
 
     # ---------------------------------------------------------------- payouts
@@ -522,7 +522,7 @@ must be parsable by a JSON parser without errors.
                 created_at=u256(self._now()),
             )
         )
-        PayoutRequested(u256(payout_id), worker, u256(amount)).emit()
+        PayoutRequested(u256(payout_id), worker=worker, amount=u256(amount)).emit()
         return payout_id
 
     @gl.public.write
