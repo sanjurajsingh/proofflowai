@@ -175,10 +175,17 @@ Lovable served as the development environment and rapid prototyping tool; the bu
 Create a `.env` file with:
 
 ```env
+# GenLayer (business logic + AI verification live in the Intelligent Contract)
+VITE_GENLAYER_NETWORK=studionet          # localnet | studionet | testnetAsimov | testnetBradbury
+VITE_PROOFFLOW_CONTRACT_ADDRESS=0x...    # address printed by `genlayer deploy`
+
+# Supabase — proof image storage and optional profile metadata only
 VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
+
+No LLM API key is required: AI verification runs inside the contract through
+GenLayer's Equivalence Principle, executed by the validator network.
 
 ---
 

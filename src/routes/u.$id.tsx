@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { fromWei, getWorker, getWorkerSubmissions, qk } from "@/lib/genlayer/proofflow";
 
 export const Route = createFileRoute("/u/$id")({
   head: ({ params }) => ({
@@ -20,31 +21,46 @@ export const Route = createFileRoute("/u/$id")({
 function PublicProfile() {
   const { id } = Route.useParams();
 
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ["public-profile", id],
+  // Onchain reputation (source of truth)
+  const { data: worker, isLoading } = useQuery({
+    queryKey: qk.worker(id),
+    queryFn: () => getWorker(id),
+  });
+
+  // Optional off-chain metadata (display name, bio, avatar)
+  const { data: meta } = useQuery({
+    queryKey: ["profile-meta", id],
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("id, display_name, avatar_url, bio, trust_score, total_submissions, approved_submissions, total_earned, wallet_address, created_at")
-        .eq("id", id)
+        .select("display_name, avatar_url, bio")
+        .ilike("wallet_address", id)
         .maybeSingle();
       return data;
     },
   });
 
   const { data: subStats } = useQuery({
-    queryKey: ["public-subs", id],
+    queryKey: qk.workerSubmissions(id),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("submissions")
-        .select("status")
-        .eq("user_id", id);
-      const total = data?.length ?? 0;
-      const approved = data?.filter((s) => s.status === "approved" || s.status === "paid").length ?? 0;
-      const rejected = data?.filter((s) => s.status === "rejected").length ?? 0;
-      return { total, approved, rejected };
+      const rows = await getWorkerSubmissions(id);
+      return {
+        total: rows.length,
+        approved: rows.filter((s) => s.status === "approved").length,
+        rejected: rows.filter((s) => s.status === "rejected").length,
+      };
     },
   });
+
+  const profile = worker
+    ? {
+        display_name: meta?.display_name ?? `${id.slice(0, 6)}…${id.slice(-4)}`,
+        bio: meta?.bio ?? null,
+        wallet_address: worker.address,
+        trust_score: worker.trust,
+        total_earned: fromWei(worker.total_earned),
+      }
+    : null;
 
   if (isLoading) {
     return (
@@ -119,7 +135,7 @@ function PublicProfile() {
           <Stat icon={CheckCircle2} label="Approved" value={subStats?.approved ?? 0} color="text-success" />
           <Stat icon={XCircle} label="Rejected" value={subStats?.rejected ?? 0} color="text-destructive" />
           <Stat icon={Award} label="Completion rate" value={`${completion.toFixed(0)}%`} />
-          <Stat icon={TrendingUp} label="Total earned" value={`${Number(profile.total_earned ?? 0).toFixed(2)} GEN`} />
+          <Stat icon={TrendingUp} label="Total earned" value={`${profile.total_earned.toFixed(2)} GEN`} />
         </div>
       </main>
     </div>

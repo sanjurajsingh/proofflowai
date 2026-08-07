@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, ArrowRight, AlertTriangle, FileText, Coins, ListChecks,
   ShieldCheck, Users, Brain, Eye, Rocket, Plus, X, Check, Image as ImageIcon,
@@ -16,9 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Header } from "@/components/Header";
 import { RequireWallet } from "@/components/RequireWallet";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { available, getOrCreateTreasury, reserveForCampaign } from "@/lib/treasury";
+import { useAccount, useBalance } from "wagmi";
+import { createCampaign, fundCampaign, getBrandCampaigns, type Address } from "@/lib/genlayer/proofflow";
 
 export const Route = createFileRoute("/campaigns/new")({
   component: () => <RequireWallet><NewCampaign /></RequireWallet>,
@@ -95,22 +93,20 @@ const initial: FormState = {
 };
 
 function NewCampaign() {
-  const { user } = useAuth();
+  const { address } = useAccount();
   const nav = useNavigate();
   const [step, setStep] = useState<Step>("basics");
   const [form, setForm] = useState<FormState>(initial);
   const [submitting, setSubmitting] = useState(false);
-  if (!user) return null;
+  if (!address) return null;
 
-  const { data: treasury } = useQuery({
-    queryKey: ["treasury", user.id],
-    queryFn: async () => getOrCreateTreasury(user.id),
-  });
+  // Wallet GEN balance funds the campaign directly via fund_campaign()
+  const { data: walletBalance } = useBalance({ address });
 
   const budget = Number(form.total_budget) || 0;
   const reward = Number(form.reward_amount) || 0;
-  const avail = treasury ? available(treasury) : 0;
-  const insufficient = !!treasury && budget > avail;
+  const avail = walletBalance ? Number(walletBalance.formatted) : 0;
+  const insufficient = !!walletBalance && budget > avail;
   const maxSlots = reward > 0 ? Math.floor(budget / reward) : 0;
 
   const stepIdx = STEPS.findIndex((s) => s.key === step);
@@ -128,54 +124,43 @@ function NewCampaign() {
 
   async function persist(asStatus: "draft" | "active") {
     if (asStatus === "active" && insufficient) {
-      toast.error("Insufficient treasury balance");
+      toast.error("Wallet GEN balance is lower than the budget you want to fund");
       return;
     }
     setSubmitting(true);
     try {
-      const payload = {
-        brand_id: user!.id,
+      const account = address as Address;
+      const { campaignId } = await createCampaign(account, {
         title: form.title.trim(),
         description: form.description.trim(),
-        instructions: form.instructions.trim() || null,
-        category: form.category.trim() || null,
-        cover_image_url: form.cover_image_url.trim() || null,
-        tags: form.tags,
-        proof_type: form.required_proof_types[0] as any,
-        required_proof_types: form.required_proof_types,
-        reward_amount: reward,
-        total_budget: budget,
-        max_submissions: form.max_submissions ? Number(form.max_submissions) : maxSlots,
-        start_at: form.start_at || null,
-        end_at: form.end_at || null,
-        required_keywords: form.required_keywords,
-        min_text_length: Number(form.min_text_length) || 0,
-        allowed_domains: form.allowed_domains,
-        forbidden_domains: form.forbidden_domains,
-        min_trust_score: Number(form.min_trust_score) || 0,
-        cooldown_seconds: Number(form.cooldown_seconds) || 60,
+        instructions: form.instructions.trim(),
+        proof_type: form.required_proof_types[0],
+        category: form.category.trim(),
+        cover_image_path: form.cover_image_url.trim(),
+        reward,
+        budget,
         max_per_user: Number(form.max_per_user) || 1,
-        auto_approve_threshold: form.auto_approve_threshold,
-        manual_review_threshold: form.manual_review_threshold,
-        reject_threshold: form.reject_threshold,
-        status: asStatus,
-      };
+        cooldown_seconds: Number(form.cooldown_seconds) || 60,
+        min_trust: Number(form.min_trust_score) || 0,
+        min_text_length: Number(form.min_text_length) || 0,
+        required_keywords: form.required_keywords,
+      });
 
-      const { data, error } = await supabase.from("campaigns").insert(payload).select().single();
-      if (error) throw error;
+      // The write receipt may not expose the return value — resolve the id from chain state.
+      let id = typeof campaignId === "number" ? campaignId : null;
+      if (id === null) {
+        const mine = await getBrandCampaigns(account);
+        id = mine.length ? Math.max(...mine.map((c) => c.id)) : null;
+      }
+      if (id === null) throw new Error("Campaign created but its id could not be resolved");
 
       if (asStatus === "active") {
-        try {
-          await reserveForCampaign(user!.id, data.id, budget);
-        } catch (treasuryErr: any) {
-          await supabase.from("campaigns").delete().eq("id", data.id);
-          throw treasuryErr;
-        }
-        toast.success("Campaign launched. Budget reserved");
+        await fundCampaign(account, id, budget);
+        toast.success("Campaign created and funded onchain");
       } else {
-        toast.success("Draft saved");
+        toast.success("Campaign created. Fund it from your dashboard to go live");
       }
-      nav({ to: "/campaigns/$id", params: { id: data.id } });
+      nav({ to: "/campaigns/$id", params: { id: String(id) } });
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to save campaign");
     } finally {
@@ -196,7 +181,7 @@ function NewCampaign() {
             <Hexagon className="h-3.5 w-3.5" /> New bounty campaign
           </div>
           <h1 className="mt-2 font-display text-4xl font-bold">Design a verified proof campaign</h1>
-          <p className="mt-2 text-muted-foreground">Configure the task, validation rules, AI thresholds, and publish onchain.</p>
+          <p className="mt-2 text-muted-foreground">Configure the task, validation rules, AI thresholds, and publish it onchain.</p>
         </div>
 
         {/* Step rail */}
@@ -252,7 +237,7 @@ function NewCampaign() {
                 ) : (
                   <>
                     <Button variant="outline" onClick={() => persist("draft")} disabled={submitting}>
-                      <Save className="h-4 w-4" /> Save as draft
+                      <Save className="h-4 w-4" /> Create without funding
                     </Button>
                     <Button variant="hero" onClick={() => persist("active")} disabled={submitting || insufficient}>
                       <Rocket className="h-4 w-4" /> {submitting ? "Publishing..." : "Fund and publish"}
@@ -267,14 +252,14 @@ function NewCampaign() {
           <aside className="space-y-4">
             <div className="glass rounded-2xl p-5">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                <Coins className="h-3.5 w-3.5" /> Treasury
+                <Coins className="h-3.5 w-3.5" /> Wallet
               </div>
               <div className="mt-2 font-display text-2xl font-bold text-gradient">{avail.toFixed(2)} GEN</div>
-              <div className="mt-1 text-xs text-muted-foreground">available to reserve</div>
+              <div className="mt-1 text-xs text-muted-foreground">available to fund campaigns</div>
               {insufficient && (
                 <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span>Need {(budget - avail).toFixed(2)} GEN more to launch.</span>
+                  <span>Need {(budget - avail).toFixed(2)} GEN more in your wallet to fund this budget.</span>
                 </div>
               )}
             </div>
@@ -348,7 +333,7 @@ function RewardStep({ form, update, maxSlots, avail, insufficient }:
   { form: FormState; update: any; maxSlots: number; avail: number; insufficient: boolean }) {
   return (
     <div className="space-y-5">
-      <StepHeading icon={Coins} title="Reward and budget" subtitle="GEN settles onchain via your campaign treasury." />
+      <StepHeading icon={Coins} title="Reward and budget" subtitle="GEN is escrowed in the Intelligent Contract when you fund the campaign." />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <Label>Reward per submission (GEN)</Label>
@@ -379,13 +364,13 @@ function RewardStep({ form, update, maxSlots, avail, insufficient }:
           <span className="font-mono text-primary font-bold">{maxSlots}</span>
         </div>
         <div className="mt-2 flex justify-between text-muted-foreground">
-          <span>Treasury available</span>
+          <span>Wallet available</span>
           <span className="font-mono">{avail.toFixed(2)} GEN</span>
         </div>
         {insufficient && (
           <div className="mt-2 flex items-start gap-2 text-destructive">
             <AlertTriangle className="h-4 w-4 mt-0.5" />
-            <span>Insufficient treasury. Fund it on the dashboard before publishing.</span>
+            <span>Insufficient wallet balance. Use the testnet faucet before funding.</span>
           </div>
         )}
       </div>

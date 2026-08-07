@@ -26,6 +26,7 @@ STATUS_REJECTED = "rejected"
 STATUS_REVIEW = "review"
 
 PAYOUT_PENDING = "pending"
+PAYOUT_ESCROWED = "escrowed"
 PAYOUT_PAID = "paid"
 PAYOUT_REJECTED = "rejected"
 
@@ -526,18 +527,86 @@ must be parsable by a JSON parser without errors.
         return payout_id
 
     @gl.public.write
+    def claim_reward(self, amount: int) -> int:
+        """Claim earned rewards to the caller's own wallet address.
+
+        The balance is debited immediately (so a reward cannot be claimed
+        twice) and an escrowed payout record is created for settlement.
+        """
+        worker = gl.message.sender_address
+        balance = self.balances_default(self.balances, worker, 0)
+        claimed = balance if amount <= 0 else amount
+        if claimed <= 0:
+            raise gl.vm.UserError("Nothing to claim")
+        if claimed > balance:
+            raise gl.vm.UserError("Amount exceeds your balance")
+
+        new_balance = balance - claimed
+        self.balances[worker] = u256(new_balance)
+        self.ledger.append(
+            LedgerEntry(
+                id=u256(len(self.ledger)),
+                worker=worker,
+                kind="claim",
+                amount=u256(claimed),
+                balance_after=u256(new_balance),
+                submission_id=u256(0),
+                note="Reward claimed to wallet",
+                created_at=u256(self._now()),
+            )
+        )
+        payout_id = len(self.payouts)
+        self.payouts.append(
+            PayoutRequest(
+                id=u256(payout_id),
+                worker=worker,
+                amount=u256(claimed),
+                destination=worker.as_hex,
+                status=PAYOUT_ESCROWED,
+                note="Claimed by worker",
+                created_at=u256(self._now()),
+            )
+        )
+        PayoutRequested(u256(payout_id), worker=worker, amount=u256(claimed)).emit()
+        return payout_id
+
+
+
+    @gl.public.write
     def settle_payout(self, payout_id: int, approve: bool, note: str) -> str:
         if gl.message.sender_address != self.admin:
             raise gl.vm.UserError("Admin only")
         if payout_id < 0 or payout_id >= len(self.payouts):
             raise gl.vm.UserError("Unknown payout request")
         payout = self.payouts[payout_id]
-        if payout.status != PAYOUT_PENDING:
+        if payout.status != PAYOUT_PENDING and payout.status != PAYOUT_ESCROWED:
             raise gl.vm.UserError("Payout already settled")
 
         worker = payout.worker
         amount = int(payout.amount)
-        if approve:
+        escrowed = payout.status == PAYOUT_ESCROWED
+        if approve and escrowed:
+            # Balance was already debited at claim time.
+            payout.status = PAYOUT_PAID
+        elif not approve and escrowed:
+            # Refund the escrowed amount back to the worker balance.
+            balance = self.balances_default(self.balances, worker, 0)
+            new_balance = balance + amount
+            self.balances[worker] = u256(new_balance)
+            self.ledger.append(
+                LedgerEntry(
+                    id=u256(len(self.ledger)),
+                    worker=worker,
+                    kind="refund",
+                    amount=u256(amount),
+                    balance_after=u256(new_balance),
+                    submission_id=u256(0),
+                    note=note if note != "" else "Claim rejected",
+                    created_at=u256(self._now()),
+                )
+            )
+            payout.status = PAYOUT_REJECTED
+        elif approve:
             balance = self.balances_default(self.balances, worker, 0)
             if amount > balance:
                 raise gl.vm.UserError("Worker balance no longer covers this payout")
@@ -699,7 +768,7 @@ must be parsable by a JSON parser without errors.
                 "created_at": int(p.created_at),
             }
             for p in self.payouts
-            if p.status == PAYOUT_PENDING
+            if p.status == PAYOUT_PENDING or p.status == PAYOUT_ESCROWED
         ]
 
     @gl.public.view
