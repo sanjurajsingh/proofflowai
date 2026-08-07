@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { BarChart3, CheckCircle2, ShieldAlert, DollarSign, TrendingUp } from "lucide-react";
 import { Header } from "@/components/Header";
 import { RequireWallet } from "@/components/RequireWallet";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { money } from "@/lib/format";
+import { useAccount } from "wagmi";
+import { chainDate, fromWei, getBrandSubmissions, qk } from "@/lib/genlayer/proofflow";
+
+const gen = (n: number) => `${n.toFixed(2)} GEN`;
 
 type AnalyticsData = {
   totalSubmissions: number;
@@ -25,34 +26,29 @@ export const Route = createFileRoute("/analytics")({
 });
 
 function Analytics() {
-  const { user } = useAuth();
-  if (!user) return null;
+  const { address } = useAccount();
+  if (!address) return null;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["analytics", user.id],
+    queryKey: [...qk.brandSubmissions(address), "analytics"],
     queryFn: async () => {
-      const { data: campaigns } = await supabase.from("campaigns").select("id").eq("brand_id", user.id);
-      const campaignIds = (campaigns ?? []).map((c) => c.id);
-      const { data: ownedSubs } = campaignIds.length
-        ? await supabase.from("submissions").select("status, ai_spam_score, rejection_reason, reward_paid, created_at").in("campaign_id", campaignIds)
-        : { data: [] };
-      const list = ownedSubs ?? [];
-      const approved = list.filter((s) => s.status === "approved" || s.status === "paid").length;
+      const list = await getBrandSubmissions(address);
+      const approved = list.filter((s) => s.status === "approved").length;
       const rejected = list.filter((s) => s.status === "rejected").length;
-      const pending = list.filter((s) => ["pending", "queued", "ai_reviewing"].includes(s.status)).length;
+      const pending = list.filter((s) => s.status === "review").length;
       const total = list.length;
-      const fraudish = list.filter((s) => (s.ai_spam_score ?? 0) >= 60).length;
-      const totalPayouts = list.reduce((a, s) => a + Number(s.reward_paid ?? 0), 0);
+      const fraudish = list.filter((s) => s.spam >= 60).length;
+      const totalPayouts = list.reduce((a, s) => a + fromWei(s.reward_paid), 0);
       const days = new Map<string, { submissions: number; approved: number }>();
       for (let i = 13; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
         days.set(d.toISOString().slice(0, 10), { submissions: 0, approved: 0 });
       }
       for (const s of list) {
-        const bucket = days.get(new Date(s.created_at).toISOString().slice(0, 10));
+        const bucket = days.get(chainDate(s.created_at).toISOString().slice(0, 10));
         if (!bucket) continue;
         bucket.submissions++;
-        if (s.status === "approved" || s.status === "paid") bucket.approved++;
+        if (s.status === "approved") bucket.approved++;
       }
       const result: AnalyticsData = {
         totalSubmissions: total,
@@ -80,7 +76,7 @@ function Analytics() {
           <BarChart3 className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-3xl font-bold">Analytics</h1>
-            <p className="text-sm text-muted-foreground">Performance and fraud signals across your campaigns</p>
+            <p className="text-sm text-muted-foreground">Performance and fraud signals across your onchain campaigns</p>
           </div>
         </div>
 
@@ -89,8 +85,8 @@ function Analytics() {
             <div className="grid gap-4 md:grid-cols-5">
               <Stat icon={CheckCircle2} label="Approval rate" value={`${data.approvalRate}%`} accent />
               <Stat icon={ShieldAlert} label="Fraud rate" value={`${data.fraudRate}%`} />
-              <Stat icon={DollarSign} label="Total payouts" value={money(data.totalPayouts)} />
-              <Stat icon={TrendingUp} label="Cost / verified" value={money(data.costPerVerified)} />
+              <Stat icon={DollarSign} label="Total payouts" value={gen(data.totalPayouts)} />
+              <Stat icon={TrendingUp} label="Cost / verified" value={gen(data.costPerVerified)} />
               <Stat icon={BarChart3} label="Submissions" value={data.totalSubmissions.toString()} />
             </div>
 
