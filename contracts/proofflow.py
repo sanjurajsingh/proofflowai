@@ -14,10 +14,11 @@ private bucket); only their storage path and a content hash are recorded here.
 """
 
 import json
-import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from genlayer import *
+
 
 STATUS_PENDING = "pending"
 STATUS_APPROVED = "approved"
@@ -103,28 +104,30 @@ class PayoutRequest:
 
 
 class CampaignCreated(gl.Event):
-    def __init__(self, campaign_id: u256, owner: Address, /):
+    # Fields before `/` are indexed topics; everything else travels in the blob.
+    def __init__(self, campaign_id: u256, /, **blob):
         pass
 
 
 class CampaignFunded(gl.Event):
-    def __init__(self, campaign_id: u256, amount: u256, /):
+    def __init__(self, campaign_id: u256, /, **blob):
         pass
 
 
 class ProofVerified(gl.Event):
-    def __init__(self, submission_id: u256, worker: Address, status: str, /):
+    def __init__(self, submission_id: u256, /, **blob):
         pass
 
 
 class RewardCredited(gl.Event):
-    def __init__(self, worker: Address, amount: u256, /):
+    def __init__(self, worker: Address, /, **blob):
         pass
 
 
 class PayoutRequested(gl.Event):
-    def __init__(self, payout_id: u256, worker: Address, amount: u256, /):
+    def __init__(self, payout_id: u256, /, **blob):
         pass
+
 
 
 class ProofFlow(gl.Contract):
@@ -151,11 +154,11 @@ class ProofFlow(gl.Contract):
     def _now(self) -> int:
         # Time inside GenVM is pinned to the transaction timestamp, so this is
         # identical on every validator.
-        return int(time.time())
+        return int(datetime.now(timezone.utc).timestamp())
 
     def _campaign(self, campaign_id: int) -> Campaign:
         if campaign_id < 0 or campaign_id >= len(self.campaigns):
-            raise Exception("Unknown campaign")
+            raise gl.vm.UserError("Unknown campaign")
         return self.campaigns[campaign_id]
 
     def _trust_of(self, addr: Address) -> int:
@@ -185,13 +188,13 @@ class ProofFlow(gl.Contract):
                 created_at=u256(self._now()),
             )
         )
-        RewardCredited(worker, u256(amount)).emit()
+        RewardCredited(worker, amount=u256(amount)).emit()
         return new_balance
 
     def _require_owner_or_admin(self, campaign: Campaign) -> None:
         sender = gl.message.sender_address
         if sender != campaign.owner and sender != self.admin:
-            raise Exception("Not authorised for this campaign")
+            raise gl.vm.UserError("Not authorised for this campaign")
 
     # ----------------------------------------------------------- campaign ops
 
@@ -213,13 +216,13 @@ class ProofFlow(gl.Contract):
         required_keywords: str,
     ) -> int:
         if len(title.strip()) < 3:
-            raise Exception("Title too short")
+            raise gl.vm.UserError("Title too short")
         if reward <= 0:
-            raise Exception("Reward must be positive")
+            raise gl.vm.UserError("Reward must be positive")
         if budget < reward:
-            raise Exception("Budget must cover at least one reward")
+            raise gl.vm.UserError("Budget must cover at least one reward")
         if max_per_user <= 0:
-            raise Exception("max_per_user must be positive")
+            raise gl.vm.UserError("max_per_user must be positive")
 
         campaign_id = len(self.campaigns)
         self.campaigns.append(
@@ -245,7 +248,7 @@ class ProofFlow(gl.Contract):
                 created_at=u256(self._now()),
             )
         )
-        CampaignCreated(u256(campaign_id), gl.message.sender_address).emit()
+        CampaignCreated(u256(campaign_id), owner=gl.message.sender_address).emit()
         return campaign_id
 
     @gl.public.write.payable
@@ -253,12 +256,12 @@ class ProofFlow(gl.Contract):
         campaign = self._campaign(campaign_id)
         amount = int(gl.message.value)
         if amount <= 0:
-            raise Exception("Send GEN with this transaction to fund the campaign")
+            raise gl.vm.UserError("Send GEN with this transaction to fund the campaign")
         funded = int(campaign.funded) + amount
         campaign.funded = u256(funded)
         if funded >= int(campaign.reward):
             campaign.active = True
-        CampaignFunded(u256(campaign_id), u256(amount)).emit()
+        CampaignFunded(u256(campaign_id), amount=u256(amount)).emit()
         return funded
 
     @gl.public.write
@@ -266,7 +269,7 @@ class ProofFlow(gl.Contract):
         campaign = self._campaign(campaign_id)
         self._require_owner_or_admin(campaign)
         if active and int(campaign.funded) < int(campaign.reward):
-            raise Exception("Fund the campaign before activating it")
+            raise gl.vm.UserError("Fund the campaign before activating it")
         campaign.active = active
 
     # --------------------------------------------------------- AI verification
@@ -351,38 +354,38 @@ must be parsable by a JSON parser without errors.
         now = self._now()
 
         if not campaign.active:
-            raise Exception("Campaign is not active")
+            raise gl.vm.UserError("Campaign is not active")
         if worker == campaign.owner:
-            raise Exception("Brands cannot submit to their own campaign")
+            raise gl.vm.UserError("Brands cannot submit to their own campaign")
 
         reward = int(campaign.reward)
         if int(campaign.spent) + reward > int(campaign.funded):
-            raise Exception("Campaign is out of funds")
+            raise gl.vm.UserError("Campaign is out of funds")
 
         trust = self._trust_of(worker)
         if trust < int(campaign.min_trust):
-            raise Exception("Trust score too low for this campaign")
+            raise gl.vm.UserError("Trust score too low for this campaign")
 
         cooldown = int(campaign.cooldown_seconds)
         if worker in self.last_submission_at:
             elapsed = now - int(self.last_submission_at[worker])
             if elapsed < cooldown:
-                raise Exception(f"Cooldown active, wait {cooldown - elapsed}s")
+                raise gl.vm.UserError(f"Cooldown active, wait {cooldown - elapsed}s")
 
         cap_key = f"{campaign_id}:{worker.as_hex}"
         used = int(self.per_campaign_count.get(cap_key, 0))
         if used >= int(campaign.max_per_user):
-            raise Exception("Submission limit reached for this campaign")
+            raise gl.vm.UserError("Submission limit reached for this campaign")
 
         if len(proof_text.strip()) < int(campaign.min_text_length):
-            raise Exception("Proof text is too short for this campaign")
+            raise gl.vm.UserError("Proof text is too short for this campaign")
         if proof_url == "" and proof_text.strip() == "" and image_path == "":
-            raise Exception("Provide a link, text or screenshot")
+            raise gl.vm.UserError("Provide a link, text or screenshot")
 
         if content_hash != "":
             dup_key = f"{campaign_id}:{content_hash}"
             if self.seen_hashes.get(dup_key, False):
-                raise Exception("This proof was already submitted to this campaign")
+                raise gl.vm.UserError("This proof was already submitted to this campaign")
             self.seen_hashes[dup_key] = True
 
         submission_id = len(self.submissions)
@@ -447,7 +450,7 @@ must be parsable by a JSON parser without errors.
         elif status == STATUS_REJECTED:
             self.trust[worker] = u256(max(0, trust - 2))
 
-        ProofVerified(u256(submission_id), worker, status).emit()
+        ProofVerified(u256(submission_id), worker=worker, status=status).emit()
         return submission_id
 
     def _settle_approval(self, campaign: Campaign, submission: Submission, trust: int) -> None:
@@ -472,12 +475,12 @@ must be parsable by a JSON parser without errors.
     @gl.public.write
     def moderate(self, submission_id: int, approve: bool, reason: str) -> str:
         if submission_id < 0 or submission_id >= len(self.submissions):
-            raise Exception("Unknown submission")
+            raise gl.vm.UserError("Unknown submission")
         submission = self.submissions[submission_id]
         campaign = self._campaign(int(submission.campaign_id))
         self._require_owner_or_admin(campaign)
         if submission.status == STATUS_APPROVED:
-            raise Exception("Submission already approved")
+            raise gl.vm.UserError("Submission already approved")
 
         worker = submission.worker
         trust = self._trust_of(worker)
@@ -491,7 +494,7 @@ must be parsable by a JSON parser without errors.
             submission.feedback = reason if reason != "" else "Rejected by reviewer"
             submission.reviewed_at = u256(self._now())
             self.trust[worker] = u256(max(0, trust - 2))
-        ProofVerified(submission.id, worker, submission.status).emit()
+        ProofVerified(u256(int(submission.id)), worker=worker, status=submission.status).emit()
         return submission.status
 
     # ---------------------------------------------------------------- payouts
@@ -501,11 +504,11 @@ must be parsable by a JSON parser without errors.
         worker = gl.message.sender_address
         balance = self.balances_default(self.balances, worker, 0)
         if amount <= 0:
-            raise Exception("Amount must be positive")
+            raise gl.vm.UserError("Amount must be positive")
         if amount > balance:
-            raise Exception("Amount exceeds your balance")
+            raise gl.vm.UserError("Amount exceeds your balance")
         if destination.strip() == "":
-            raise Exception("Destination is required")
+            raise gl.vm.UserError("Destination is required")
 
         payout_id = len(self.payouts)
         self.payouts.append(
@@ -519,25 +522,25 @@ must be parsable by a JSON parser without errors.
                 created_at=u256(self._now()),
             )
         )
-        PayoutRequested(u256(payout_id), worker, u256(amount)).emit()
+        PayoutRequested(u256(payout_id), worker=worker, amount=u256(amount)).emit()
         return payout_id
 
     @gl.public.write
     def settle_payout(self, payout_id: int, approve: bool, note: str) -> str:
         if gl.message.sender_address != self.admin:
-            raise Exception("Admin only")
+            raise gl.vm.UserError("Admin only")
         if payout_id < 0 or payout_id >= len(self.payouts):
-            raise Exception("Unknown payout request")
+            raise gl.vm.UserError("Unknown payout request")
         payout = self.payouts[payout_id]
         if payout.status != PAYOUT_PENDING:
-            raise Exception("Payout already settled")
+            raise gl.vm.UserError("Payout already settled")
 
         worker = payout.worker
         amount = int(payout.amount)
         if approve:
             balance = self.balances_default(self.balances, worker, 0)
             if amount > balance:
-                raise Exception("Worker balance no longer covers this payout")
+                raise gl.vm.UserError("Worker balance no longer covers this payout")
             new_balance = balance - amount
             self.balances[worker] = u256(new_balance)
             self.ledger.append(
