@@ -26,6 +26,7 @@ STATUS_REJECTED = "rejected"
 STATUS_REVIEW = "review"
 
 PAYOUT_PENDING = "pending"
+PAYOUT_ESCROWED = "escrowed"
 PAYOUT_PAID = "paid"
 PAYOUT_REJECTED = "rejected"
 
@@ -561,7 +562,7 @@ must be parsable by a JSON parser without errors.
                 worker=worker,
                 amount=u256(claimed),
                 destination=worker.as_hex,
-                status=PAYOUT_PENDING,
+                status=PAYOUT_ESCROWED,
                 note="Claimed by worker",
                 created_at=u256(self._now()),
             )
@@ -578,12 +579,34 @@ must be parsable by a JSON parser without errors.
         if payout_id < 0 or payout_id >= len(self.payouts):
             raise gl.vm.UserError("Unknown payout request")
         payout = self.payouts[payout_id]
-        if payout.status != PAYOUT_PENDING:
+        if payout.status != PAYOUT_PENDING and payout.status != PAYOUT_ESCROWED:
             raise gl.vm.UserError("Payout already settled")
 
         worker = payout.worker
         amount = int(payout.amount)
-        if approve:
+        escrowed = payout.status == PAYOUT_ESCROWED
+        if approve and escrowed:
+            # Balance was already debited at claim time.
+            payout.status = PAYOUT_PAID
+        elif not approve and escrowed:
+            # Refund the escrowed amount back to the worker balance.
+            balance = self.balances_default(self.balances, worker, 0)
+            new_balance = balance + amount
+            self.balances[worker] = u256(new_balance)
+            self.ledger.append(
+                LedgerEntry(
+                    id=u256(len(self.ledger)),
+                    worker=worker,
+                    kind="refund",
+                    amount=u256(amount),
+                    balance_after=u256(new_balance),
+                    submission_id=u256(0),
+                    note=note if note != "" else "Claim rejected",
+                    created_at=u256(self._now()),
+                )
+            )
+            payout.status = PAYOUT_REJECTED
+        elif approve:
             balance = self.balances_default(self.balances, worker, 0)
             if amount > balance:
                 raise gl.vm.UserError("Worker balance no longer covers this payout")
