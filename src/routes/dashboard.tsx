@@ -297,7 +297,7 @@ function FundCampaignDialog({
             <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
           </div>
           <DialogFooter>
-            <Button type="submit" variant="hero" disabled={busy}>
+            <Button type="submit" variant="hero" disabled={busy || !canTransact}>
               {busy ? "Awaiting consensus..." : `Deposit ${amount} GEN`}
             </Button>
           </DialogFooter>
