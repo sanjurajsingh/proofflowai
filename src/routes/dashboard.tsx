@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAccount } from "wagmi";
+import { useWallet } from "@/hooks/useWallet";
+import { NetworkNotice } from "@/components/NetworkNotice";
 import { Plus, Wallet, CheckCircle2, XCircle, Clock, BarChart3, Droplets, Hourglass, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
