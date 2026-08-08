@@ -1,30 +1,35 @@
 import { http } from "wagmi";
 import { defineChain } from "viem";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { GENLAYER_CHAIN, GENLAYER_NETWORK, explorerBaseUrl } from "@/lib/genlayer/config";
 
-// GenLayer testnet (zkSync OS based) — chainId 4221
-export const genlayerTestnet = defineChain({
-  id: 4221,
-  name: "GenLayer Testnet",
+const rpcUrl =
+  (GENLAYER_CHAIN as any)?.rpcUrls?.default?.http?.[0] ?? "https://studio.genlayer.com/api";
+
+/**
+ * Wallet chain is derived from the same GenLayer chain the SDK talks to, so the
+ * wallet can never be connected to a different network than the contract reads.
+ */
+export const genlayerChain = defineChain({
+  id: (GENLAYER_CHAIN as any).id as number,
+  name: (GENLAYER_CHAIN as any).name ?? `GenLayer ${GENLAYER_NETWORK}`,
   nativeCurrency: { name: "GenLayer", symbol: "GEN", decimals: 18 },
-  rpcUrls: {
-    default: { http: ["https://zksync-os-testnet-genlayer.zksync.dev"] },
-  },
+  rpcUrls: { default: { http: [rpcUrl] } },
   blockExplorers: {
-    default: {
-      name: "GenLayer Explorer",
-      url: "https://zksync-os-testnet-genlayer.explorer.zksync.dev",
-    },
+    default: { name: "GenLayer Explorer", url: explorerBaseUrl() },
   },
   testnet: true,
 });
 
+/** Back-compat alias. */
+export const genlayerTestnet = genlayerChain;
+
 export const wagmiConfig = getDefaultConfig({
   appName: "ProofFlow AI",
   projectId: "3a8170812b534d0ff9d794f19a901d64",
-  chains: [genlayerTestnet],
+  chains: [genlayerChain],
   transports: {
-    [genlayerTestnet.id]: http(),
+    [genlayerChain.id]: http(rpcUrl),
   },
   ssr: false,
 });

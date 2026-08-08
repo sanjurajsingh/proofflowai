@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAccount } from "wagmi";
+import { useWallet } from "@/hooks/useWallet";
+import { NetworkNotice } from "@/components/NetworkNotice";
 import { Plus, Wallet, CheckCircle2, XCircle, Clock, BarChart3, Droplets, Hourglass, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,11 +31,28 @@ const gen = (n: number) => `${n.toFixed(2)} GEN`;
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 export const Route = createFileRoute("/dashboard")({
+  head: () => ({
+    meta: [
+      { title: "Your ProofFlow dashboard — campaigns, proofs, rewards" },
+      {
+        name: "description",
+        content:
+          "Track the campaigns you fund, the proofs you submit and your GEN reward balance, all read from the GenLayer Intelligent Contract.",
+      },
+      { property: "og:title", content: "Your ProofFlow dashboard" },
+      {
+        property: "og:description",
+        content: "Onchain campaigns, submissions and reward balance in one place.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: () => <RequireWallet><Dashboard /></RequireWallet>,
 });
 
 function Dashboard() {
-  const { address } = useAccount();
+  const { address, canTransact } = useWallet();
   const qc = useQueryClient();
   if (!address) return null;
 
@@ -103,6 +121,8 @@ function Dashboard() {
         </div>
 
         {/* Onchain campaign funding */}
+        <NetworkNotice className="mb-6" />
+
         <section className="mb-8">
           <div className="glass rounded-2xl border-primary/40 p-6 shadow-glow">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -234,6 +254,7 @@ function FundCampaignDialog({
 }: {
   account: Address; campaignId: number; title: string; suggested: number; onFunded: () => void;
 }) {
+  const { canTransact } = useWallet();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(suggested > 0 ? suggested.toFixed(2) : "10");
   const [busy, setBusy] = useState(false);
@@ -276,7 +297,7 @@ function FundCampaignDialog({
             <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
           </div>
           <DialogFooter>
-            <Button type="submit" variant="hero" disabled={busy}>
+            <Button type="submit" variant="hero" disabled={busy || !canTransact}>
               {busy ? "Awaiting consensus..." : `Deposit ${amount} GEN`}
             </Button>
           </DialogFooter>
