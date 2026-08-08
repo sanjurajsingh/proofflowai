@@ -25,14 +25,22 @@ export const PROOFFLOW_CONTRACT_ADDRESS = ((import.meta.env[
 
 export const isContractConfigured = () => /^0x[0-9a-fA-F]{40}$/.test(PROOFFLOW_CONTRACT_ADDRESS);
 
-export const explorerTxUrl = (hash: string) => {
-  const base =
-    GENLAYER_NETWORK === "testnetAsimov"
-      ? "https://explorer-asimov.genlayer.com"
-      : GENLAYER_NETWORK === "testnetBradbury"
-        ? "https://explorer-bradbury.genlayer.com"
-        : "https://explorer-studio.genlayer.com";
-  return `${base}/tx/${hash}`;
-};
+export const explorerBaseUrl = () =>
+  GENLAYER_NETWORK === "testnetAsimov"
+    ? "https://explorer-asimov.genlayer.com"
+    : GENLAYER_NETWORK === "testnetBradbury"
+      ? "https://explorer-bradbury.genlayer.com"
+      : "https://explorer-studio.genlayer.com";
+
+export const explorerTxUrl = (hash: string) => `${explorerBaseUrl()}/tx/${hash}`;
+
+export const NETWORK_LABEL =
+  GENLAYER_NETWORK === "studionet"
+    ? "GenLayer Studionet"
+    : GENLAYER_NETWORK === "localnet"
+      ? "GenLayer Localnet"
+      : GENLAYER_NETWORK === "testnetAsimov"
+        ? "GenLayer Asimov Testnet"
+        : "GenLayer Bradbury Testnet";
 
 export const FAUCET_URL = "https://testnet-faucet.genlayer.foundation";
