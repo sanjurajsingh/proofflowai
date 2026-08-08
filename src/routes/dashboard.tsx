@@ -121,6 +121,8 @@ function Dashboard() {
         </div>
 
         {/* Onchain campaign funding */}
+        <NetworkNotice className="mb-6" />
+
         <section className="mb-8">
           <div className="glass rounded-2xl border-primary/40 p-6 shadow-glow">
             <div className="flex flex-wrap items-start justify-between gap-4">
