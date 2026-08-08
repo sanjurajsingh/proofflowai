@@ -30,11 +30,28 @@ const gen = (n: number) => `${n.toFixed(2)} GEN`;
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 export const Route = createFileRoute("/dashboard")({
+  head: () => ({
+    meta: [
+      { title: "Your ProofFlow dashboard — campaigns, proofs, rewards" },
+      {
+        name: "description",
+        content:
+          "Track the campaigns you fund, the proofs you submit and your GEN reward balance, all read from the GenLayer Intelligent Contract.",
+      },
+      { property: "og:title", content: "Your ProofFlow dashboard" },
+      {
+        property: "og:description",
+        content: "Onchain campaigns, submissions and reward balance in one place.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: () => <RequireWallet><Dashboard /></RequireWallet>,
 });
 
 function Dashboard() {
-  const { address } = useAccount();
+  const { address, canTransact } = useWallet();
   const qc = useQueryClient();
   if (!address) return null;
 
