@@ -254,6 +254,7 @@ function FundCampaignDialog({
 }: {
   account: Address; campaignId: number; title: string; suggested: number; onFunded: () => void;
 }) {
+  const { canTransact } = useWallet();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(suggested > 0 ? suggested.toFixed(2) : "10");
   const [busy, setBusy] = useState(false);
